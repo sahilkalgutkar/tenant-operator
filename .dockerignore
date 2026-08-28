@@ -1,0 +1,7 @@
+.git
+.github
+bin
+config
+docs
+*.md
+cover.out
