@@ -1,0 +1,9 @@
+apiVersion: tenancy.sahilkalgutkar.io/v1alpha1
+kind: Tenant
+metadata:
+  name: acme
+spec:
+  displayName: Acme Corporation
+  tier: free
+  image: ghcr.io/nginxinc/nginx-unprivileged:1.27-alpine
+  contactEmail: platform@acme.example

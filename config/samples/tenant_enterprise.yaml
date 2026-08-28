@@ -1,0 +1,10 @@
+apiVersion: tenancy.sahilkalgutkar.io/v1alpha1
+kind: Tenant
+metadata:
+  name: globex
+spec:
+  displayName: Globex Industries
+  tier: enterprise
+  image: ghcr.io/nginxinc/nginx-unprivileged:1.27-alpine
+  replicas: 5
+  contactEmail: platform@globex.example
