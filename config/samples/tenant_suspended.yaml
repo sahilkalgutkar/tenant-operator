@@ -1,0 +1,12 @@
+# Suspending a tenant scales its workload to zero and leaves everything else —
+# namespace, quota, credentials — exactly where it was.
+apiVersion: tenancy.sahilkalgutkar.io/v1alpha1
+kind: Tenant
+metadata:
+  name: initech
+spec:
+  displayName: Initech
+  tier: standard
+  image: ghcr.io/nginxinc/nginx-unprivileged:1.27-alpine
+  suspended: true
+  contactEmail: platform@initech.example

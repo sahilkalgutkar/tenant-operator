@@ -1,0 +1,25 @@
+# The webhook server needs a certificate the API server will trust. cert-manager
+# issues it and injects the CA bundle into the webhook configurations, which is
+# why the operator can be installed with `kubectl apply` and nothing else — no
+# out-of-band step to mint certificates by hand.
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned-issuer
+  namespace: system
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: serving-cert
+  namespace: system
+spec:
+  dnsNames:
+    - tenant-operator-webhook-service.tenant-operator-system.svc
+    - tenant-operator-webhook-service.tenant-operator-system.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: selfsigned-issuer
+  secretName: webhook-server-cert

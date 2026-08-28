@@ -1,0 +1,8 @@
+# cert-manager writes the CA bundle into both webhook configurations. Without
+# this annotation the API server has no way to trust the webhook server, and
+# every Tenant create fails closed — which is the correct failure mode, and a
+# confusing one to debug if you did not expect it.
+- op: add
+  path: /metadata/annotations
+  value:
+    cert-manager.io/inject-ca-from: tenant-operator-system/tenant-operator-serving-cert
