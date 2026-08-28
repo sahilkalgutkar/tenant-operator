@@ -1,0 +1,29 @@
+# Coverage is a floor, not a target: the number is here to stop a change from
+# quietly shipping untested, not to be optimised for its own sake.
+coverage:
+  status:
+    project:
+      default:
+        target: 80%
+        threshold: 2%
+    patch:
+      default:
+        target: 80%
+        threshold: 5%
+
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: true
+
+ignore:
+  # controller-gen writes these DeepCopy functions from the type definitions.
+  # There is no decision in them to test: a test would only assert that the
+  # generator generated, and the types they copy are exercised on every call
+  # into the API in the envtest suite.
+  - "api/v1alpha1/zz_generated.deepcopy.go"
+  # main() parses flags and hands off to internal/bootstrap, which is tested
+  # directly — including the flag parsing, the option validation and the
+  # manager wiring. What is left here is three lines of process plumbing that
+  # a test could only cover by shelling out, which would measure nothing.
+  - "cmd/manager/main.go"
