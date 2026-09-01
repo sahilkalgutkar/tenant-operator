@@ -112,3 +112,17 @@ func TestNamespaceName(t *testing.T) {
 
 	assert.Equal(t, "tenant-globex", DefaultNamespaceFor("globex"))
 }
+
+func TestEveryTierBoundsItsScratchVolume(t *testing.T) {
+	var previous int64
+	for _, tier := range KnownTiers() {
+		p := PolicyFor(tier)
+		require.NotEmpty(t, p.ScratchSize, "%s has no scratch size", tier)
+
+		limit := p.ScratchSizeLimit()
+		assert.Positive(t, limit.Value(), "%s scratch size must be a real cap", tier)
+		assert.Greater(t, limit.Value(), previous,
+			"%s should not get less scratch space than the tier below it", tier)
+		previous = limit.Value()
+	}
+}

@@ -110,6 +110,15 @@ silently rewrites a namespace another team was using — and the teardown path
 inherits the same rule, so a tenant pointed at somebody else's namespace will
 never delete it.
 
+**A read-only root filesystem, and somewhere to write.** Every workload
+container runs with `readOnlyRootFilesystem: true`, which on its own is not a
+hardened container so much as a container that does not start — nginx, the
+sample this repo ships, dies on its first attempt to create a temp directory.
+So each pod gets one `emptyDir` mounted at `/tmp`, sized by tier. It is bounded
+for the same reason the rest of the tier table is: an unbounded `emptyDir` is
+node ephemeral storage a tenant could fill without ever touching its own
+namespace quota.
+
 **The API key is generated exactly once.** Regenerating it every pass would
 technically converge, and would also rotate the credential out from under a
 running workload every time anything about the tenant changed. Convergence is

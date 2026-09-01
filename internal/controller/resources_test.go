@@ -163,6 +163,38 @@ func TestMutateDeployment(t *testing.T) {
 	}
 }
 
+// A read-only root filesystem is only a hardening measure if the container can
+// still start. Without a writable mount the sample workload this repo ships
+// crash-loops on its first write, so the mount is part of the contract, not a
+// detail of one image.
+func TestMutateDeploymentGivesTheWorkloadAWritableScratchDir(t *testing.T) {
+	for _, tier := range tenancyv1alpha1.KnownTiers() {
+		tenant := testTenant()
+		tenant.Spec.Tier = tier
+
+		d := &appsv1.Deployment{}
+		mutateDeployment(tenant, d)
+
+		require.Len(t, d.Spec.Template.Spec.Volumes, 1, "%s: expected exactly one scratch volume", tier)
+		vol := d.Spec.Template.Spec.Volumes[0]
+		assert.Equal(t, scratchVolumeName, vol.Name)
+		require.NotNil(t, vol.EmptyDir, "%s: scratch must be an emptyDir", tier)
+
+		// An unbounded emptyDir is node ephemeral storage the namespace quota
+		// does not reach, so the tier's cap has to actually land on it.
+		require.NotNil(t, vol.EmptyDir.SizeLimit, "%s: scratch volume is unbounded", tier)
+		expected := tenancyv1alpha1.PolicyFor(tier).ScratchSizeLimit()
+		assert.True(t, expected.Equal(*vol.EmptyDir.SizeLimit),
+			"%s: scratch size limit is %s, want %s", tier, vol.EmptyDir.SizeLimit, &expected)
+
+		c := d.Spec.Template.Spec.Containers[0]
+		require.True(t, *c.SecurityContext.ReadOnlyRootFilesystem, "%s", tier)
+		require.Len(t, c.VolumeMounts, 1, "%s: the scratch volume is declared but not mounted", tier)
+		assert.Equal(t, scratchVolumeName, c.VolumeMounts[0].Name)
+		assert.Equal(t, scratchMountPath, c.VolumeMounts[0].MountPath)
+	}
+}
+
 func TestMutateDeploymentSuspends(t *testing.T) {
 	d := &appsv1.Deployment{}
 	mutateDeployment(testTenant(func(x *tenancyv1alpha1.Tenant) { x.Spec.Suspended = true }), d)
