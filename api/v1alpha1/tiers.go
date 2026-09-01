@@ -28,6 +28,12 @@ type TierPolicy struct {
 	// its own namespace, independently of what I create for it.
 	QuotaPods     int64
 	QuotaServices int64
+	// ScratchSize caps the writable /tmp every workload pod gets. The root
+	// filesystem is read-only, so a container that needs to write anything at
+	// all writes it here -- and an emptyDir with no size limit is node
+	// ephemeral storage a tenant could fill without ever touching its own
+	// quota, which is the one resource the namespace quota does not bound.
+	ScratchSize string
 	// Protected means deletion requires an explicit confirmation annotation.
 	Protected bool
 }
@@ -43,6 +49,7 @@ var tierPolicies = map[TenantTier]TierPolicy{
 		MemoryLimit:     "128Mi",
 		QuotaPods:       4,
 		QuotaServices:   2,
+		ScratchSize:     "64Mi",
 	},
 	TierStandard: {
 		DefaultReplicas: 2,
@@ -53,6 +60,7 @@ var tierPolicies = map[TenantTier]TierPolicy{
 		MemoryLimit:     "512Mi",
 		QuotaPods:       20,
 		QuotaServices:   10,
+		ScratchSize:     "256Mi",
 	},
 	TierEnterprise: {
 		DefaultReplicas: 3,
@@ -63,6 +71,7 @@ var tierPolicies = map[TenantTier]TierPolicy{
 		MemoryLimit:     "2Gi",
 		QuotaPods:       100,
 		QuotaServices:   50,
+		ScratchSize:     "1Gi",
 		Protected:       true,
 	},
 }
@@ -96,6 +105,11 @@ func (p TierPolicy) ResourceRequirements() corev1.ResourceRequirements {
 			corev1.ResourceMemory: resource.MustParse(p.MemoryLimit),
 		},
 	}
+}
+
+// ScratchSizeLimit is the size cap on the workload's writable /tmp volume.
+func (p TierPolicy) ScratchSizeLimit() resource.Quantity {
+	return resource.MustParse(p.ScratchSize)
 }
 
 // QuotaHard is the namespace-wide ResourceQuota for a tier. I scale the

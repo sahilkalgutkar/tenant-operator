@@ -23,6 +23,8 @@ const (
 	networkPolicyName       = "tenant-isolation"
 	apiKeyField             = "api-key"
 	workloadPort            = 8080
+	scratchVolumeName       = "scratch"
+	scratchMountPath        = "/tmp"
 )
 
 // CredentialsSecretName is the Secret holding a tenant's generated API key.
@@ -156,6 +158,20 @@ func mutateDeployment(t *tenancyv1alpha1.Tenant, d *appsv1.Deployment) {
 			Type: corev1.SeccompProfileTypeRuntimeDefault,
 		},
 	}
+	// A read-only root filesystem with nowhere to write is not a hardened
+	// container, it is a container that does not start: almost every image
+	// wants a scratch directory, and the ones built for read-only rootfs --
+	// nginx-unprivileged, the sample this repo ships -- are written to put
+	// their temp paths under /tmp precisely because that is where the writable
+	// mount is expected to be. So I keep the root filesystem read-only and
+	// hand the workload one bounded emptyDir instead.
+	scratchLimit := policy.ScratchSizeLimit()
+	d.Spec.Template.Spec.Volumes = []corev1.Volume{{
+		Name: scratchVolumeName,
+		VolumeSource: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{SizeLimit: &scratchLimit},
+		},
+	}}
 	d.Spec.Template.Spec.Containers = []corev1.Container{{
 		Name:      "workload",
 		Image:     t.Spec.Image,
@@ -172,6 +188,10 @@ func mutateDeployment(t *tenancyv1alpha1.Tenant, d *appsv1.Deployment) {
 				Drop: []corev1.Capability{"ALL"},
 			},
 		},
+		VolumeMounts: []corev1.VolumeMount{{
+			Name:      scratchVolumeName,
+			MountPath: scratchMountPath,
+		}},
 		Env: []corev1.EnvVar{
 			{Name: "TENANT_NAME", Value: t.Name},
 			{Name: "TENANT_TIER", Value: string(t.Spec.Tier)},
